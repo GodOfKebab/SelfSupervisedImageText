@@ -1,0 +1,8 @@
+torch
+torchvision
+torchaudio
+python-dateutil
+easydict
+pyyaml
+pandas
+tensorboardX

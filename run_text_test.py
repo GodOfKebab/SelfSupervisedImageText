@@ -289,7 +289,7 @@ inv_normalize = transforms.Normalize(mean=[-mean_r/std_r, -mean_g/std_g, -mean_b
 # Data augmentation and normalization for training
 #pretrain_dir = '1-billion-word-language-modeling-benchmark-r13output/training-monolingual.tokenized.shuffled/*'
 print("Initializing Datasets and Dataloaders...")
-pretrain_dir = '1-billion-word-language-modeling-benchmark-r13output/training-monolingual.tokenized.shuffled/*'
+pretrain_dir = 'data/1-billion-word-language-modeling-benchmark-r13output/training-monolingual.tokenized.shuffled/*'
 benchmark_datasets = {x: BillionDataset(pretrain_dir, split=x) for x in ['train']}
 
 

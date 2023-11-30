@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  jupyter:
+    init: true
+    build: docker/jupyter
+    ports:
+      - "8889:8889"
+    volumes:
+      - ".:/app"
+      - "./.jupyter:/root/.jupyter/"
+    environment:
+      JUPYTER_PORT: 8889
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    shm_size: 50G
+    command: ["jupyter", "lab", "--NotebookApp.custom_display_url=http://yasars-desktop.kebabnet:8889", "--NotebookApp.token=''", "--NotebookApp.password=''"]
+    hostname: localhost

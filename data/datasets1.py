@@ -257,7 +257,7 @@ class BirdstextDataset(Image_Caption_Dataset):
                 
          ###################################################for 80 :20 split##########
          ########################################################################
-        self.split_dir = os.path.join(os.path.normpath(rootdir + os.sep + os.pardir), split)
+        self.split_dir = os.path.join(rootdir, split)
         filepath = os.path.join(self.split_dir, 'filenames.pickle')
         with open(filepath, 'rb') as f:
             filenames = pickle.load(f)
@@ -288,27 +288,37 @@ class BirdstextDataset(Image_Caption_Dataset):
                 line = re.sub(r'[^A-Za-z0-9 ,.?!-]+', ' ', line)
                 self.captions.append(line.strip().lower())
             f.close()
-        
+
         allcaptions =[]
-        for captionpath in captionpaths:
-            with open(captionpath) as f:
+        for i, captionpath in enumerate(captionpaths):
+            if i % int(len(captionpaths) / 10.) == 0:
+                print(f"[BirdsDataset] ({i / len(captionpaths) * 100.:.2f}%={i}/{len(captionpaths)}) Reading Birds Caption Files... ")
+
+            with open(captionpath, encoding='utf-8') as f:
                 lines = f.readlines()
                 if len(lines) > 0:
                     for line in lines:
                         line = re.sub(r'[^A-Za-z0-9 ,.?!-]+', ' ', line)
                         allcaptions.append(line.strip()) # select always the first description as caption for now
                         
-                        
-        max_sent_length = max([len(self.vocab_builder.tokenizer.tokenize(sentence)) for sentence in allcaptions])
-        
+        max_sent_length = 0
+        for i, sentence in enumerate(allcaptions):
+            if i % int(len(allcaptions) / 10.) == 0:
+                print(f"[BirdsDataset] ({i / len(allcaptions)*100.:.2f}%={i}/{len(allcaptions)}) Calculating Max Token Length... ")
+            candidate_len = len(self.vocab_builder.tokenizer.tokenize(sentence))
+            if candidate_len > max_sent_length:
+                max_sent_length = candidate_len
+
+        # max_sent_length = max([len(self.vocab_builder.tokenizer.tokenize(sentence)) for sentence in allcaptions])
         self.max_sent_length = max_sent_length + 2  # + 2 for sos and eos
         
         
         #print('the maximum sentence length',self.max_sent_length)
         #print('number of images:', len(self.images), 'number of captions:',len(self.captions))
         # build vocabulary
-        print('number of captions in birds dataset', len(self.captions))
+        print('[BirdsDataset] number of captions in birds dataset', len(self.captions))
         self.build_vocab(captionpaths)
+        print("[BirdsDataset] Built vocab!")
 
     def __len__(self):
         return len(self.captions)
@@ -338,24 +348,43 @@ class BillionDataset(Image_Caption_Dataset):
     def __init__(self, rootdir, vocab_builder=BillionVocabBuilder(), split='train'):
         super(BillionDataset, self).__init__(vocab_builder)
         self.captiondir = rootdir
-        
+
+        max_captions = 1000000
+        progress_tracker = 0
         captionpaths = []
         self.captions=[]
         for captionpath in glob.glob(self.captiondir):
-            if len(self.captions) < 1000000: #taking only one million records
+            if len(self.captions) < max_captions: #taking only one million records
+                if len(self.captions) > progress_tracker + (max_captions / 100.):
+                    print(f"[BillionDataset] ({len(self.captions)/max_captions*100.:.2f}%={len(self.captions)}/{max_captions}) Loading Captions To an Array... ")
+                    progress_tracker = len(self.captions)
                 captionpaths.append(captionpath)
                 f = open(captionpath , 'r', encoding='utf-8')
                 for line in f:
-                    if len(self.captions) < 1000000:
+                    if len(self.captions) < max_captions:
+                        if len(self.captions) > progress_tracker + (max_captions / 100.):
+                            print(
+                                f"[BillionDataset] ({len(self.captions) / max_captions*100.:.2f}%={len(self.captions)}/{max_captions}) Loading Captions To an Array... ")
+                            progress_tracker = len(self.captions)
+
                         line = re.sub(r'[^A-Za-z0-9 ,.?!-]+', ' ', line)
                         if (len(self.vocab_builder.tokenizer.tokenize(line)) +2)  <= 75 : #with length less than the length of birds dataset
                             self.captions.append(line.strip().lower())
                 f.close()
-        max_sent_length = max([len(self.vocab_builder.tokenizer.tokenize(sentence)) for sentence in self.captions])
+            else:
+                break
+        max_sent_length = 0
+        for i, sentence in enumerate(self.captions):
+            if i % int(len(self.captions) / 10.) == 0:
+                print(f"[BillionDataset] ({i / len(self.captions)*100.:.2f}%={i}/{len(self.captions)}) Calculating Max Token Length... ")
+            candidate_len = len(self.vocab_builder.tokenizer.tokenize(sentence))
+            if candidate_len > max_sent_length:
+                max_sent_length = candidate_len
         self.max_sent_length = max_sent_length + 2  # + 2 for sos and eos
         # build vocabulary
-        print('number of captions in billion dataset', len(self.captions))
+        print(f"[BillionDataset] Building Vocabulary...")
         self.build_vocab(captionpaths)
+        print(f"[BillionDataset] Built Vocabulary!")
 
     def __len__(self):
         return len(self.captions)
